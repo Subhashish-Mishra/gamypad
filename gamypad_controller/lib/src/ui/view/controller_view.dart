@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gamypad_controller/src/connection/connection_status.dart';
+import 'package:gamypad_controller/src/connection/transport_provider.dart';
 import 'package:gamypad_controller/src/ui/state/connection_controller.dart';
 import 'package:gamypad_controller/src/ui/state/input_provider.dart';
 import 'package:gamypad_controller/src/ui/state/layout_controller.dart';
@@ -37,6 +40,8 @@ class _ControllerViewState extends ConsumerState<ControllerView>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) {
       _input.releaseAll();
+    } else {
+      unawaited(ref.read(transportProvider).probe());
     }
   }
 
@@ -121,8 +126,8 @@ class _LinkNotice extends StatelessWidget {
     ConnectionStatus.connecting =>
       'Connecting. Presses go out the moment the link is up.',
     ConnectionStatus.lost =>
-      'The PC stopped listening. Nothing you press is getting through — go '
-          'back and reconnect.',
+      'Lost the PC. Nothing you press is getting through. Retrying '
+          'automatically — or go back and reconnect.',
     ConnectionStatus.disconnected =>
       'Not paired. Connect from the home screen to send anything; the pad is '
           'here either way.',
