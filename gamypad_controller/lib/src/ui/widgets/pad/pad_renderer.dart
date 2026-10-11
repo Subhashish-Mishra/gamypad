@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:gamypad_controller/src/layout/controller_layout.dart';
 import 'package:gamypad_controller/src/layout/pad_element.dart';
 import 'package:gamypad_controller/src/ui/widgets/pad/pad_button.dart';
-import 'package:gamypad_controller/src/ui/widgets/pad/pad_dpad.dart';
 import 'package:gamypad_controller/src/ui/widgets/pad/pad_stick.dart';
 import 'package:gamypad_controller/src/ui/widgets/pad/pad_trigger.dart';
 import 'package:gamypad_controller/src/utils/app_theme.dart';
@@ -106,12 +105,6 @@ class PadRenderer extends StatelessWidget {
             ? null
             : (pressed) => onButton!(button, pressed),
       ),
-      DpadElement() => PadDpad(
-        enabled: enabled,
-        onChanged: onButton == null
-            ? null
-            : (button, pressed) => onButton!(button, pressed),
-      ),
       StickElement(:final stick) => PadStick(
         enabled: enabled,
         onChanged: onStick == null ? null : (x, y) => onStick!(stick, x, y),
@@ -184,8 +177,8 @@ class _GhostPainter extends CustomPainter {
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
-    for (final metric in (Path()..addRRect(rrect.deflate(1)))
-        .computeMetrics()) {
+    for (final metric
+        in (Path()..addRRect(rrect.deflate(1))).computeMetrics()) {
       var distance = 0.0;
       while (distance < metric.length) {
         final length = math.min(_dash, metric.length - distance);
