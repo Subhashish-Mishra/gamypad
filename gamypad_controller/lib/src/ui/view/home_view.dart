@@ -88,8 +88,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
     final active = ref.read(layoutControllerProvider).value;
     // The built-in default is never edited in place: editing it starts a fresh
     // "New Layout" draft instead.
-    final isNew =
-        active == null || active.name == DefaultLayout.layout.name;
+    final isNew = active == null || active.name == DefaultLayout.layout.name;
     if (isNew) await controller.startNew();
     if (!mounted) return;
 
