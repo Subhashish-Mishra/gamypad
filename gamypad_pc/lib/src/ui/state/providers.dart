@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gamypad_pc/src/device/gamepad_device.dart';
+import 'package:gamypad_pc/src/device/dualsense_device.dart';
+import 'package:gamypad_pc/src/device/pad_type.dart';
 import 'package:gamypad_pc/src/device/uinput_device.dart';
 import 'package:gamypad_pc/src/session/gamepad_session.dart';
 import 'package:gamypad_pc/src/transport/message_socket.dart';
@@ -11,12 +13,19 @@ import 'package:protocol/protocol.dart';
 
 final socketProvider = Provider<MessageSocket>((ref) => UdpSocket());
 
-final deviceProvider = Provider<GamepadDevice>((ref) => UinputDevice());
+/// How a pad type becomes a device. A provider so tests can swap it.
+final deviceFactoryProvider = Provider<DeviceFactory>(
+  (ref) =>
+      (type) => switch (type) {
+        PadType.xbox360 => UinputDevice(),
+        PadType.playstation => DualSenseDevice(),
+      },
+);
 
 final sessionProvider = Provider<GamepadSession>((ref) {
   final session = GamepadSession(
     socket: ref.watch(socketProvider),
-    device: ref.watch(deviceProvider),
+    deviceFactory: ref.watch(deviceFactoryProvider),
   );
   ref.onDispose(session.dispose);
   return session;

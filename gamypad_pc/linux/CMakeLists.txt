@@ -132,6 +132,7 @@ set(GAMEPAD_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/../native/Gamepad.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../native/GamepadApi.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../native/Motion.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../native/DualSense.cpp
 )
 
 add_library(gamepad SHARED ${GAMEPAD_SOURCES})
@@ -140,8 +141,11 @@ target_include_directories(gamepad PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../native
 )
 
+find_package(Threads REQUIRED)
+
 target_link_libraries(gamepad PRIVATE
     ${CMAKE_DL_LIBS}
+    Threads::Threads
 )
 
 # Link gamepad library into the runner executable

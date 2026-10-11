@@ -1,4 +1,5 @@
 #include "Motion.h"
+#include "LastError.h"
 #include <cstring>
 #include <fcntl.h>
 #include <linux/input-event-codes.h>
@@ -25,8 +26,10 @@ void Motion::absAxis(int code, int range, int resolution) {
 
 Motion::Motion() {
   fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
-  if (fd < 0)
+  if (fd < 0) {
+    setLastError("open /dev/uinput");
     return;
+  }
 
   ioctl(fd, UI_SET_EVBIT, EV_ABS);
   ioctl(fd, UI_SET_EVBIT, EV_SYN);

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:gamypad_pc/src/device/gamepad_device.dart';
+import 'package:gamypad_pc/src/device/pad_type.dart';
 import 'package:gamypad_pc/src/transport/message_socket.dart';
 import 'package:protocol/protocol.dart';
 
@@ -11,9 +12,13 @@ void _trace(String message) {
 
 class GamepadSession {
   final MessageSocket socket;
-  final GamepadDevice device;
+  final DeviceFactory deviceFactory;
 
-  GamepadSession({required this.socket, required this.device});
+  GamepadSession({required this.socket, required this.deviceFactory});
+
+  /// The virtual pad. It exists only while the server runs, so games do not
+  /// see a controller that nothing is driving.
+  GamepadDevice? _device;
 
   StreamSubscription<Message>? _subscription;
   StreamSubscription<ConnectionState>? _stateSubscription;
@@ -21,8 +26,11 @@ class GamepadSession {
   Stream<ConnectionState> get state => socket.state;
   int get port => socket.port;
 
-  Future<void> start({int port = 0}) async {
-    _trace('start() called');
+  Future<void> start({int port = 0, PadType padType = PadType.xbox360}) async {
+    _trace('start() called, pad: ${padType.name}');
+    // Before the socket: if the pad cannot be made there is nothing to serve.
+    final device = deviceFactory(padType);
+    _device = device;
     _subscription = socket.messages.listen(
       apply,
       onError: (Object error, StackTrace stack) {
@@ -33,7 +41,7 @@ class GamepadSession {
     // A client that goes quiet may be holding buttons; nobody is left to
     // release them.
     _stateSubscription = socket.state.listen((next) {
-      if (next != ConnectionState.connected) device.reset();
+      if (next != ConnectionState.connected) _device?.reset();
     });
     _trace('subscribed to ${socket.runtimeType}.messages');
     try {
@@ -45,6 +53,9 @@ class GamepadSession {
       // Leave nothing subscribed, or a retry would apply every message twice.
       await _subscription?.cancel();
       _subscription = null;
+      await _stateSubscription?.cancel();
+      _stateSubscription = null;
+      _releaseDevice();
       rethrow;
     }
   }
@@ -55,7 +66,7 @@ class GamepadSession {
     _subscription = null;
     await _stateSubscription?.cancel();
     _stateSubscription = null;
-    device.reset();
+    _releaseDevice();
     _trace('subscription cancelled');
     await socket.stop();
     _trace('socket stopped');
@@ -63,19 +74,25 @@ class GamepadSession {
 
   void dispose() {
     _trace('dispose() -> device.dispose()');
-    device.dispose();
+    _releaseDevice();
+  }
+
+  void _releaseDevice() {
+    _device?.reset();
+    _device?.dispose();
+    _device = null;
   }
 
   void apply(Message message) {
     switch (message) {
       case ButtonMessage(:final button, :final pressed):
-        device.setButton(button, pressed);
+        _device?.setButton(button, pressed);
       case TriggerMessage(:final trigger, :final value):
-        device.setTrigger(trigger, value);
+        _device?.setTrigger(trigger, value);
       case StickMessage(:final stick, :final x, :final y):
-        device.setStick(stick, x, y);
+        _device?.setStick(stick, x, y);
       case MotionMessage():
-        device.setMotion(message);
+        _device?.setMotion(message);
       case Ping():
         socket.send(const Pong());
       case Pong():
