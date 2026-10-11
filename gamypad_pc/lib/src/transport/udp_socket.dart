@@ -14,8 +14,9 @@ class UdpSocket implements MessageSocket {
   RawDatagramSocket? _socket;
   Timer? _watchdog;
 
-  /// Seconds without a packet before the client is considered gone.
-  static const interval = 5;
+  /// Seconds without a packet before the client is considered gone. The phone
+  /// pings every 2s, so this spans several lost packets.
+  static const interval = 10;
 
   // Broadcast so start/stop is reversible: a single-subscription controller
   // cannot be listened to twice, and the UI's toggle stops then starts the
@@ -81,7 +82,7 @@ class UdpSocket implements MessageSocket {
   }
 
   void _startWatchdog() {
-    _watchdog = Timer.periodic(Duration(seconds: interval), (_) {
+    _watchdog = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_lastPacket == null) return;
       final elapsed = DateTime.now().difference(_lastPacket!);
       if (elapsed.inSeconds > interval) {
