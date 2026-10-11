@@ -14,6 +14,9 @@ class GamepadInput {
        _transport = transport {
     _subscription = _transport.status.listen((status) {
       if (status == ConnectionStatus.connected) _replay();
+      // Nothing can be trusted to arrive while the link is down, and the PC
+      // must not be left holding whatever was pressed when it went quiet.
+      if (status == ConnectionStatus.lost) releaseAll();
     });
   }
 
