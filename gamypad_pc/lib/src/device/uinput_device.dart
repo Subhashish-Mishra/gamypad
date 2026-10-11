@@ -7,7 +7,18 @@ import 'package:protocol/protocol.dart';
 import 'gamepad_ffi.dart';
 
 class UinputDevice implements GamepadDevice {
-  UinputDevice() : _handle = gamepadNew();
+  UinputDevice() : _handle = _create();
+
+  static Pointer<Void> _create() {
+    final handle = gamepadNew();
+    if (handle == nullptr) {
+      throw DeviceUnavailable(
+        'Could not create the Xbox 360 pad: '
+        '${nativeLastError().toDartString()}',
+      );
+    }
+    return handle;
+  }
 
   final Pointer<Void> _handle;
   bool _disposed = false;

@@ -38,18 +38,30 @@ else
   warn "/dev/uinput does not exist yet"
   echo "  It will be created by the uinput kernel module on next boot/load."
 fi
+# /dev/uhid backs the PlayStation (DualSense) controller type.
+if [[ -e /dev/uhid ]]; then
+  sudo chown root:uinput /dev/uhid
+  sudo chmod 0660 /dev/uhid
+  ok "Set permissions on /dev/uhid"
+else
+  warn "/dev/uhid does not exist yet (needed for the PlayStation controller type)"
+fi
 
 echo ""
 info "[4/7] Installing udev, tmpfiles and module autoload"
-echo 'KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="uinput", MODE="0660", TAG+="uaccess"' \
-  | sudo tee /etc/udev/rules.d/99-uinput.rules >/dev/null
+sudo tee /etc/udev/rules.d/99-uinput.rules >/dev/null <<'RULES'
+KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="uinput", MODE="0660", TAG+="uaccess"
+KERNEL=="uhid", SUBSYSTEM=="misc", GROUP="uinput", MODE="0660", TAG+="uaccess"
+# hidraw node of the virtual DualSense, so browsers (WebHID) can open it
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", KERNELS=="0003:054C:0CE6.*", GROUP="uinput", MODE="0660", TAG+="uaccess"
+RULES
 ok "Wrote /etc/udev/rules.d/99-uinput.rules"
 
-echo 'c /dev/uinput 0660 root uinput -' \
+printf 'c /dev/uinput 0660 root uinput -\nc /dev/uhid 0660 root uinput -\n' \
   | sudo tee /etc/tmpfiles.d/uinput.conf >/dev/null
 ok "Wrote /etc/tmpfiles.d/uinput.conf"
 
-echo 'uinput' | sudo tee /etc/modules-load.d/uinput.conf >/dev/null
+printf 'uinput\nuhid\n' | sudo tee /etc/modules-load.d/uinput.conf >/dev/null
 ok "Wrote /etc/modules-load.d/uinput.conf"
 
 echo ""
@@ -61,6 +73,11 @@ if lsmod | grep -q '^uinput'; then
   ok "uinput already loaded"
 else
   sudo modprobe uinput 2>/dev/null && ok "Loaded uinput" || warn "Could not modprobe uinput now (will load on reboot)"
+fi
+if lsmod | grep -q '^uhid'; then
+  ok "uhid already loaded"
+else
+  sudo modprobe uhid 2>/dev/null && ok "Loaded uhid" || warn "Could not modprobe uhid now (the PlayStation controller type needs it)"
 fi
 sudo udevadm control --reload-rules
 sudo udevadm trigger

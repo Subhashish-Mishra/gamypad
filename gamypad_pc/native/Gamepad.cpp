@@ -1,4 +1,5 @@
 #include "Gamepad.h"
+#include "LastError.h"
 #include <cstring>
 #include <fcntl.h>
 #include <linux/input-event-codes.h>
@@ -9,8 +10,8 @@
 Gamepad::Gamepad() {
   fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
   if (fd < 0) {
-    perror("open");
-    exit(1);
+    setLastError("open /dev/uinput");
+    return;
   }
 
   keyMap = {{"A", BTN_A},
@@ -44,6 +45,8 @@ Gamepad::Gamepad() {
 }
 
 Gamepad::~Gamepad() {
+  if (fd < 0)
+    return;
   ioctl(fd, UI_DEV_DESTROY);
   close(fd);
 }
