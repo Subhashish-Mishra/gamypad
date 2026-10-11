@@ -6,5 +6,6 @@ abstract interface class GamepadDevice {
   void setStick(GamepadStick stick, int x, int y);
   /// Releases every button, centres both sticks, zeroes both triggers.
   void reset();
+  void setMotion(MotionMessage motion);
   void dispose();
 }
