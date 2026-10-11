@@ -131,12 +131,10 @@ final class ControllerLayout {
     return null;
   }
 
-  bool collides(Rect rect, {String? except}) => visible.any(
-    (e) => e.id != except && e.rect.overlaps(rect),
-  );
+  bool collides(Rect rect, {String? except}) =>
+      visible.any((e) => e.id != except && e.rect.overlaps(rect));
 
-  bool get isWithinCanvas =>
-      visible.every((e) => _contains(e.rect));
+  bool get isWithinCanvas => visible.every((e) => _contains(e.rect));
 
   bool _contains(Rect rect) =>
       rect.left >= 0 &&
@@ -210,16 +208,22 @@ final class ControllerLayout {
       final rawHidden = json['hidden'];
       if (rawHidden != null) {
         if (rawHidden is! List) {
-          throw FormatException('Layout "hidden" must be a list, got: $rawHidden');
+          throw FormatException(
+            'Layout "hidden" must be a list, got: $rawHidden',
+          );
         }
         for (final id in rawHidden) {
           if (id is! String) {
             throw FormatException('Hidden id must be a string, got: $id');
           }
-          if (!PadElement.ids.contains(id)) {
-            throw FormatException('Unknown hidden element "$id"');
+          // Layouts saved when the dpad was a single element.
+          final expanded = id == _legacyDpad ? _dpadArms : [id];
+          for (final arm in expanded) {
+            if (!PadElement.ids.contains(arm)) {
+              throw FormatException('Unknown hidden element "$id"');
+            }
+            if (!hidden.contains(arm)) hidden.add(arm);
           }
-          if (!hidden.contains(id)) hidden.add(id);
         }
       }
     }
@@ -234,6 +238,10 @@ final class ControllerLayout {
       final id = entry['id'];
       if (id is! String) {
         throw FormatException('Element "id" must be a string, got: $id');
+      }
+      if (id == _legacyDpad) {
+        _expandLegacyDpad(entry, canvas, decoded);
+        continue;
       }
       if (decoded.containsKey(id)) {
         throw FormatException('Duplicate element "$id"');
@@ -257,6 +265,40 @@ final class ControllerLayout {
       name: name,
       hidden: Set.unmodifiable(hidden),
     );
+  }
+
+  static const _legacyDpad = 'dpad';
+  static const _dpadArms = ['UP', 'LEFT', 'RIGHT', 'DOWN'];
+
+  /// Turns a stored single-dpad entry into four buttons laid out as a plus
+  /// inside the old dpad's square.
+  static void _expandLegacyDpad(
+    Map entry,
+    Size canvas,
+    Map<String, PadElement> decoded,
+  ) {
+    final left = _number(entry['x'], 'dpad.x');
+    final top = _number(entry['y'], 'dpad.y');
+    final side = _number(entry['width'], 'dpad.width');
+    final cell = side / 3;
+
+    const cells = {
+      'UP': (1, 0),
+      'LEFT': (0, 1),
+      'RIGHT': (2, 1),
+      'DOWN': (1, 2),
+    };
+    for (final arm in _dpadArms) {
+      final (col, row) = cells[arm]!;
+      if (decoded.containsKey(arm)) {
+        throw FormatException('Duplicate element "$arm"');
+      }
+      final element = PadElement.fromId(
+        arm,
+        Rect.fromLTWH(left + col * cell, top + row * cell, cell, cell),
+      );
+      decoded[arm] = element.withRect(element.constrain(element.rect, canvas));
+    }
   }
 
   /// Value equality, so a layout edited back to its starting shape compares

@@ -48,7 +48,22 @@ abstract final class DefaultLayout {
           rect: at(642, topBarY, TriggerElement.defaultWidth, triggerHeight),
         ),
 
-        'dpad': DpadElement(rect: at(46, lowerRowTop, stickSide, stickSide)),
+        'UP': ButtonElement(
+          button: GamepadButton.UP,
+          rect: at(74, 232, 52, 52),
+        ),
+        'LEFT': ButtonElement(
+          button: GamepadButton.LEFT,
+          rect: at(18, 288, 52, 52),
+        ),
+        'RIGHT': ButtonElement(
+          button: GamepadButton.RIGHT,
+          rect: at(130, 288, 52, 52),
+        ),
+        'DOWN': ButtonElement(
+          button: GamepadButton.DOWN,
+          rect: at(74, 344, 52, 52),
+        ),
 
         'SELECT': ButtonElement(
           button: GamepadButton.SELECT,
