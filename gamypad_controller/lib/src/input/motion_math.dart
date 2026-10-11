@@ -141,6 +141,10 @@ const double aimDeadzoneDps = 2.5;
 ({int x, int y}) aimStick(Vec3 gyro, {Vec3? up, bool invertY = false}) =>
     aimStickFromRates(aimRates(gyro, up: up, invertY: invertY));
 
+/// Whether [gyro] (rad/s) is slower than the aim deadzone: the phone is, for
+/// practical purposes, not turning.
+bool isStill(Vec3 gyro) => gyro.length * _degPerRad < aimDeadzoneDps;
+
 /// Accumulated turn that pushes the held stick fully over.
 const double holdFullScaleDeg = 30;
 

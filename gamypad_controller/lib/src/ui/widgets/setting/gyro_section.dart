@@ -30,7 +30,7 @@ const gyroOptionsFor = <GyroMode, List<GyroOption>>{
     GyroOption.sixAxis,
   ],
   GyroMode.tilt: [GyroOption.sixAxis],
-  GyroMode.motionDevice: [],
+  GyroMode.motionDevice: [GyroOption.invertY, GyroOption.holdPosition],
 };
 
 const _optionText = <GyroOption, ({String title, String subtitle})>{
@@ -51,6 +51,32 @@ const _optionText = <GyroOption, ({String title, String subtitle})>{
         'working when the phone is rolled or tipped, and tilt is steadier',
   ),
 };
+
+/// Title and explanation of [option] as it applies to [mode].
+({String title, String subtitle}) optionText(GyroMode mode, GyroOption option) {
+  if (mode == GyroMode.motionDevice) {
+    switch (option) {
+      case GyroOption.invertY:
+        return (
+          title: 'Invert vertical axis',
+          subtitle:
+              'Flips the up/down rotation sent to the PC. The accelerometer '
+              'is left as it is',
+        );
+      case GyroOption.holdPosition:
+        return (
+          title: 'Hold position',
+          subtitle:
+              'Keeps sending the last rotation when the phone stops, instead '
+              'of dropping to zero. A game will keep turning until you '
+              'rotate back',
+        );
+      case GyroOption.sixAxis:
+        break;
+    }
+  }
+  return _optionText[option]!;
+}
 
 const _gyroModeLabels = <GyroMode, String>{
   GyroMode.aim: 'AIM',
@@ -138,8 +164,8 @@ class GyroSection extends StatelessWidget {
             const SizedBox(height: 12),
             _OptionTile(
               key: ValueKey('gyro-option-${option.name}'),
-              title: _optionText[option]!.title,
-              subtitle: _optionText[option]!.subtitle,
+              title: optionText(model.gyroMode, option).title,
+              subtitle: optionText(model.gyroMode, option).subtitle,
               value: _valueOf(option),
               onChanged: (value) => onChanged(_with(option, value)),
             ),

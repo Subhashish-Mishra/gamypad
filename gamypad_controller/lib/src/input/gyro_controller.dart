@@ -68,6 +68,9 @@ class GyroController {
   Vec3 _accel = Vec3.zero;
   Duration? _lastGyroAt;
 
+  // Motion mode, hold position: the last reading that was actually turning.
+  Vec3 _heldGyro = Vec3.zero;
+
   StreamSubscription<Vec3>? _gyroSub;
   StreamSubscription<Vec3>? _accelSub;
 
@@ -90,6 +93,7 @@ class GyroController {
     await _accelSub?.cancel();
     _gyroSub = _accelSub = null;
     _hold.reset();
+    _heldGyro = Vec3.zero;
     final stick = _stick;
     if (stick != null) _input.releaseMotionStick(stick);
   }
@@ -119,12 +123,26 @@ class GyroController {
       case GyroMode.aim:
         _emitAim(dt);
       case GyroMode.motionDevice:
-        _input.sendMotion(motionMessage(_gyro, _accel));
+        _input.sendMotion(motionMessage(_motionGyro(), _accel));
       case GyroMode.tilt:
         // The fused estimate moves with the gyro, not only on accelerometer
         // ticks, so steering responds as the phone turns.
         if (options.sixAxis) _emitTilt();
     }
+  }
+
+  /// The gyro reading to send in motion mode, after the options.
+  ///
+  /// Invert flips pitch only. Hold keeps sending the last reading that was
+  /// really turning once the phone goes still, instead of dropping to zero;
+  /// the receiving game keeps turning until the phone turns back.
+  Vec3 _motionGyro() {
+    var gyro = _gyro;
+    if (options.invertY) gyro = Vec3(-gyro.x, gyro.y, gyro.z);
+    if (!options.holdPosition) return gyro;
+
+    if (!isStill(gyro)) _heldGyro = gyro;
+    return _heldGyro;
   }
 
   void _emitAim(double dt) {
