@@ -9,13 +9,25 @@ import 'dart:convert';
 
 class UdpTransport implements GamepadTransport {
   UdpTransport({
-    this.pingInterval = const Duration(seconds: 3),
-    this.watchdogInterval = const Duration(seconds: 5),
+    this.pingInterval = const Duration(seconds: 2),
+    this.checkInterval = const Duration(seconds: 1),
+    this.timeout = const Duration(seconds: 8),
     this.connectionTimeout = const Duration(seconds: 2),
   });
 
+  /// How often a [Ping] goes out. UDP drops packets, so [timeout] must span
+  /// several of these — one lost ping or pong must never end the link.
   final Duration pingInterval;
-  final Duration watchdogInterval;
+
+  /// How often the watchdog looks at the clock.
+  final Duration checkInterval;
+
+  /// Silence longer than this marks the link [ConnectionStatus.lost]. The
+  /// socket stays open and pings continue, so a later pong restores
+  /// [ConnectionStatus.connected] without the user reconnecting.
+  final Duration timeout;
+
+  /// How long [connect] waits for the first pong before giving up.
   final Duration connectionTimeout;
 
   RawDatagramSocket? _socket;
@@ -30,6 +42,7 @@ class UdpTransport implements GamepadTransport {
   DateTime? _lastPong;
   Completer<void>? _firstPong;
   bool _tearingDown = false;
+  bool _lost = false;
 
   final _status = StreamController<ConnectionStatus>.broadcast();
   final _incoming = StreamController<Message>.broadcast();
@@ -44,6 +57,7 @@ class UdpTransport implements GamepadTransport {
   Future<void> connect(ConnectionTarget target) async {
     if (_socket != null) _teardown();
     _tearingDown = false;
+    _lost = false;
     _status.add(ConnectionStatus.connecting);
 
     try {
@@ -98,6 +112,7 @@ class UdpTransport implements GamepadTransport {
 
     _lastPong = null;
     _firstPong = null;
+    _lost = false;
     _target = null;
     _targetPort = null;
     _resolved = const [];
@@ -126,6 +141,15 @@ class UdpTransport implements GamepadTransport {
     } on SocketException {
       // Closed between the guard above and here; the watchdog detects this.
     }
+  }
+
+  @override
+  Future<void> probe() async {
+    if (_socket == null) return;
+    // Timers may have been frozen while the app was in the background; the
+    // silence that built up then says nothing about the link.
+    if (!_lost) _lastPong = DateTime.now();
+    await send(const Ping());
   }
 
   void _startPing() {
@@ -161,18 +185,24 @@ class UdpTransport implements GamepadTransport {
     if (message is! Pong) return;
 
     _lastPong = DateTime.now();
+    if (_lost) {
+      _lost = false;
+      _status.add(ConnectionStatus.connected);
+    }
     _incoming.add(message);
     final firstPong = _firstPong;
     if (firstPong != null && !firstPong.isCompleted) firstPong.complete();
   }
 
   void _startWatchdog() {
-    _watchdog = Timer.periodic(watchdogInterval, (_) {
+    _watchdog = Timer.periodic(checkInterval, (_) {
       final last = _lastPong;
-      if (last == null) return;
+      if (last == null || _lost) return;
 
-      if (DateTime.now().difference(last) > watchdogInterval) {
-        _teardown();
+      if (DateTime.now().difference(last) > timeout) {
+        // Keep the socket and the ping timer: the PC re-accepts any packet,
+        // so the first pong that comes back restores the link by itself.
+        _lost = true;
         _status.add(ConnectionStatus.lost);
       }
     });

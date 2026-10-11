@@ -17,6 +17,8 @@ class UinputDevice implements GamepadDevice {
   Pointer<Void>? _motion;
   bool _motionFailed = false;
 
+  final Set<GamepadButton> _pressed = {};
+
   bool _up = false;
   bool _down = false;
   bool _left = false;
@@ -52,6 +54,7 @@ class UinputDevice implements GamepadDevice {
       return;
     }
 
+    pressed ? _pressed.add(button) : _pressed.remove(button);
     final key = button.name.toNativeUtf8();
     try {
       pressed ? gamepadPressKey(_handle, key) : gamepadReleaseKey(_handle, key);
@@ -83,6 +86,24 @@ class UinputDevice implements GamepadDevice {
       _motion = handle;
     }
     motionSet(handle, m.gx, m.gy, m.gz, m.ax, m.ay, m.az);
+  }
+
+  @override
+  void reset() {
+    if (_disposed) return;
+    for (final button in _pressed.toList()) {
+      setButton(button, false);
+    }
+    if (_up || _down || _left || _right) {
+      _up = _down = _left = _right = false;
+      gamepadSetDpad(_handle, 0, 0);
+    }
+    for (final stick in GamepadStick.values) {
+      setStick(stick, stickCenter, stickCenter);
+    }
+    for (final trigger in GamepadTrigger.values) {
+      setTrigger(trigger, triggerMin);
+    }
   }
 
   @override

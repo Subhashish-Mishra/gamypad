@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gamypad_controller/src/connection/connection_status.dart';
+import 'package:gamypad_controller/src/connection/transport_provider.dart';
 import 'package:gamypad_controller/src/ui/state/connection_controller.dart';
 import 'package:gamypad_controller/src/ui/state/gyro_provider.dart';
 import 'package:gamypad_controller/src/ui/state/input_provider.dart';
@@ -46,6 +47,9 @@ class _ControllerViewState extends ConsumerState<ControllerView>
       return;
     }
 
+    // Timers may have been frozen: check the link right away, then fall back
+    // to a full reconnect if it is gone.
+    unawaited(ref.read(transportProvider).probe());
     if (!_resumePending) return;
     _resumePending = false;
     unawaited(_reconnectAfterResume());
@@ -176,7 +180,8 @@ class _LinkNotice extends StatelessWidget {
     ConnectionStatus.connecting =>
       'Reconnecting. Presses will work again when the link is restored.',
     ConnectionStatus.lost =>
-      'Connection lost. Attempting to reconnect...',
+      'Lost the PC. Nothing you press is getting through. Retrying '
+          'automatically — or go back and reconnect.',
     ConnectionStatus.disconnected =>
       'Not paired. Connect from the home screen to send anything; the pad is '
           'here either way.',
