@@ -16,6 +16,7 @@ class GamepadSession {
   GamepadSession({required this.socket, required this.device});
 
   StreamSubscription<Message>? _subscription;
+  StreamSubscription<ConnectionState>? _stateSubscription;
 
   Stream<ConnectionState> get state => socket.state;
   int get port => socket.port;
@@ -29,6 +30,11 @@ class GamepadSession {
         Error.throwWithStackTrace(error, stack);
       },
     );
+    // A client that goes quiet may be holding buttons; nobody is left to
+    // release them.
+    _stateSubscription = socket.state.listen((next) {
+      if (next != ConnectionState.connected) device.reset();
+    });
     _trace('subscribed to ${socket.runtimeType}.messages');
     try {
       await socket.start();
@@ -44,6 +50,9 @@ class GamepadSession {
     _trace('stop() called');
     await _subscription?.cancel();
     _subscription = null;
+    await _stateSubscription?.cancel();
+    _stateSubscription = null;
+    device.reset();
     _trace('subscription cancelled');
     await socket.stop();
     _trace('socket stopped');
