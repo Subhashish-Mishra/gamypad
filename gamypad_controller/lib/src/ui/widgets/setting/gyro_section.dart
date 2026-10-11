@@ -15,9 +15,9 @@ const gyroModeDescriptions = <GyroMode, String>{
       'right. Level is centre, about 45° is full. Works in any game. Best for '
       'racing.',
   GyroMode.motionDevice:
-      'Sends raw gyro and accelerometer data to a virtual DualSense-style '
-      'motion sensor on the PC. Only games and tools that read a motion '
-      'device will respond, and sticks are not affected. Experimental.',
+      'Sends raw gyro and accelerometer data to the PC without moving any '
+      'stick. Set the PC app to the PlayStation controller type and games '
+      'that support DualSense motion can read it. Experimental.',
 };
 
 /// Extra switches that only make sense for some modes.

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gamypad_pc/src/device/pad_type.dart';
 import 'package:gamypad_pc/src/settings/server_settings.dart';
 import 'package:gamypad_pc/src/ui/state/notifier.dart';
 import 'package:gamypad_pc/src/ui/state/server_settings_controller.dart';
@@ -69,6 +70,14 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _PadTypeSection(
+                    selected: settings.value?.padType ?? PadType.xbox360,
+                    enabled: settings.hasValue,
+                    onChanged: (type) => ref
+                        .read(serverSettingsControllerProvider.notifier)
+                        .setPadType(type),
+                  ),
+                  const SizedBox(height: 32),
                   TextFormField(
                     controller: _port,
                     enabled: settings.hasValue,
@@ -87,7 +96,8 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                   if (running) ...[
                     const SizedBox(height: 12),
                     const Text(
-                      'The server is running — changes apply on next start.',
+                      'The server is running — changes (including the '
+                      'controller type) apply on next start.',
                       style: TextStyle(color: ColorPalette.muted, fontSize: 12),
                     ),
                   ],
@@ -102,6 +112,82 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// What each controller type is, shown under the selector.
+const padTypeDescriptions = <PadType, String>{
+  PadType.xbox360:
+      'Presents an Xbox 360 controller. Works in every game and needs no '
+      'extra setup. Has no gyro, so the phone\'s Motion mode only reaches '
+      'tools that read a separate motion device.',
+  PadType.playstation:
+      'Presents a Sony DualSense as a real HID device, so browsers (WebHID), '
+      'Steam and SDL games see a genuine PlayStation controller with gyro and '
+      'accelerometer. Needs access to /dev/uhid — re-run the installer once, '
+      'then log out and back in.',
+};
+
+const _padTypeLabels = <PadType, String>{
+  PadType.xbox360: 'XBOX 360',
+  PadType.playstation: 'PLAYSTATION',
+};
+
+class _PadTypeSection extends StatelessWidget {
+  const _PadTypeSection({
+    required this.selected,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final PadType selected;
+  final bool enabled;
+  final ValueChanged<PadType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'CONTROLLER TYPE',
+          style: TextStyle(
+            color: ColorPalette.muted,
+            fontSize: 10,
+            letterSpacing: 3,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SegmentedButton<PadType>(
+          key: const ValueKey('pad-type'),
+          showSelectedIcon: false,
+          segments: [
+            for (final type in PadType.values)
+              ButtonSegment(
+                value: type,
+                label: Text(
+                  _padTypeLabels[type]!,
+                  style: const TextStyle(letterSpacing: 2, fontSize: 12),
+                ),
+              ),
+          ],
+          selected: {selected},
+          onSelectionChanged: enabled
+              ? (selection) => onChanged(selection.single)
+              : null,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          padTypeDescriptions[selected]!,
+          key: const ValueKey('pad-type-description'),
+          style: const TextStyle(
+            color: ColorPalette.muted,
+            fontSize: 12,
+            height: 1.4,
+          ),
+        ),
+      ],
     );
   }
 }

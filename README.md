@@ -52,6 +52,8 @@ for the most reliable, lowest-latency connection.
 - Full Xbox 360 controller: A/B/X/Y, LB/RB, LT/RT, Start, Back, Guide, LS, RS
 - Dual analog sticks with deadzone tuning and D-Pad
 - Automatic pairing via QR code scan (manual IP entry also works)
+- Choose the controller the PC presents: Xbox 360, or a PlayStation DualSense
+  (a real HID device with gyro — visible to browsers via WebHID, Steam and SDL)
 - Resize and reposition every pad element with the built-in layout editor
 - Optional haptic feedback and digital-trigger mode
 - Connection watchdog — detects disconnects on both ends automatically
@@ -115,6 +117,19 @@ your browser or file manager.
 
 When you're done, hit the stop button on the PC or exit the controller — the
 connection closes on both ends automatically.
+
+---
+
+## Controller type
+
+In the Linux app, **Settings → Controller type** switches between:
+
+- **Xbox 360** (default) — works in every game; no gyro.
+- **PlayStation** — presents a Sony DualSense, including gyro and
+  accelerometer. It is created through `/dev/uhid`, so run the installer once
+  (it sets up access and loads the `uhid` module) and log out and back in.
+
+The change applies the next time you start the server.
 
 ---
 

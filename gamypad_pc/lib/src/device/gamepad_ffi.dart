@@ -63,3 +63,31 @@ final GamepadDelete motionDelete = _lib
 final MotionSet motionSet = _lib.lookupFunction<_MotionSetC, MotionSet>(
   'Motion_set',
 );
+
+/// Why the last `*_new` returned null.
+final Pointer<Utf8> Function() nativeLastError = _lib
+    .lookupFunction<Pointer<Utf8> Function(), Pointer<Utf8> Function()>(
+      'Native_lastError',
+    );
+
+// DualSense (uhid)
+typedef _DsSetButtonC = Void Function(Pointer<Void>, Pointer<Utf8>, Int32);
+typedef DsSetButton = void Function(Pointer<Void>, Pointer<Utf8>, int);
+
+final GamepadNew dualSenseNew = _lib.lookupFunction<_GamepadNewC, GamepadNew>(
+  'DualSense_new',
+);
+final GamepadDelete dualSenseDelete = _lib
+    .lookupFunction<_GamepadDeleteC, GamepadDelete>('DualSense_delete');
+final DsSetButton dualSenseSetButton = _lib
+    .lookupFunction<_DsSetButtonC, DsSetButton>('DualSense_setButton');
+final GamepadSetDpad dualSenseSetDpad = _lib
+    .lookupFunction<_GamepadSetDpadC, GamepadSetDpad>('DualSense_setDpad');
+final GamepadSetAxis dualSenseSetStick = _lib
+    .lookupFunction<_GamepadSetAxisC, GamepadSetAxis>('DualSense_setStick');
+final GamepadSetTrigger dualSenseSetTrigger = _lib
+    .lookupFunction<_GamepadSetTriggerC, GamepadSetTrigger>(
+      'DualSense_setTrigger',
+    );
+final MotionSet dualSenseSetMotion = _lib
+    .lookupFunction<_MotionSetC, MotionSet>('DualSense_setMotion');

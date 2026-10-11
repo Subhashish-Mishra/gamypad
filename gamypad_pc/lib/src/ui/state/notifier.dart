@@ -59,7 +59,7 @@ class ServerController extends Notifier<ServerState> {
 
     try {
       final settings = await ref.read(serverSettingsControllerProvider.future);
-      await session.start(port: settings.port);
+      await session.start(port: settings.port, padType: settings.padType);
 
       final ip = await ref.read(localIpProvider.future);
       state = state.copyWith(port: session.port, ip: ip);

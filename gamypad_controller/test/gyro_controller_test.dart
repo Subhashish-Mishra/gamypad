@@ -25,6 +25,8 @@ class _FakeTransport implements GamepadTransport {
   Future<void> connect(ConnectionTarget target) async {}
   @override
   Future<void> disconnect() async {}
+  @override
+  Future<void> probe() async {}
 }
 
 class _FakeSensors implements MotionSensors {
