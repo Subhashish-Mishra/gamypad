@@ -13,6 +13,10 @@ class UinputDevice implements GamepadDevice {
   bool _disposed = false;
 
   final Set<GamepadButton> _pressed = {};
+  // Created on the first motion message: most sessions never send one, and the
+  // device is visible system-wide while it exists.
+  Pointer<Void>? _motion;
+  bool _motionFailed = false;
 
   bool _up = false;
   bool _down = false;
@@ -87,9 +91,27 @@ class UinputDevice implements GamepadDevice {
   }
 
   @override
+  void setMotion(MotionMessage m) {
+    if (_motionFailed) return;
+    var handle = _motion;
+    if (handle == null) {
+      handle = motionNew();
+      if (handle == nullptr) {
+        _motionFailed = true;
+        return;
+      }
+      _motion = handle;
+    }
+    motionSet(handle, m.gx, m.gy, m.gz, m.ax, m.ay, m.az);
+  }
+
+  @override
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    final motion = _motion;
+    if (motion != null) motionDelete(motion);
+    _motion = null;
     if (_up || _down || _left || _right) {
       _up = _down = _left = _right = false;
       gamepadSetDpad(_handle, 0, 0);
