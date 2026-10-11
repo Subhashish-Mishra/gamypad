@@ -36,7 +36,10 @@ sealed class PadElement {
     'GUIDE',
     'RB',
     'RT',
-    'dpad',
+    'UP',
+    'DOWN',
+    'LEFT',
+    'RIGHT',
     'SELECT',
     'START',
     'LS',
@@ -50,14 +53,6 @@ sealed class PadElement {
   ];
 
   static PadElement fromId(String id, Rect rect) {
-    if (id == DpadElement.elementId) return DpadElement(rect: rect);
-
-    if (_dpadDirections.contains(id)) {
-      throw FormatException(
-        '"$id" belongs to the dpad group and is not addressable on its own',
-      );
-    }
-
     for (final button in GamepadButton.values) {
       if (button.name == id) return ButtonElement(button: button, rect: rect);
     }
@@ -72,8 +67,6 @@ sealed class PadElement {
 
     throw FormatException('Unknown pad element id: "$id"');
   }
-
-  static const _dpadDirections = {'UP', 'DOWN', 'LEFT', 'RIGHT'};
 
   String get id;
 
@@ -141,39 +134,6 @@ final class ButtonElement extends PadElement {
 
   @override
   String toString() => 'ButtonElement($button, $rect)';
-}
-
-final class DpadElement extends PadElement {
-  const DpadElement({required Rect rect}) : super(rect);
-
-  static const elementId = 'dpad';
-
-  @override
-  String get id => elementId;
-
-  @override
-  MinMax get minSize => const MinMax(96);
-
-  @override
-  MinMax get maxSize => MinMax.unbounded;
-
-  @override
-  Size resolveSize(double width, double height) {
-    final side = fit(math.max(width, height));
-    return Size(side, side);
-  }
-
-  @override
-  PadElement withRect(Rect rect) => DpadElement(rect: rect);
-
-  @override
-  bool operator ==(Object other) => other is DpadElement && other.rect == rect;
-
-  @override
-  int get hashCode => rect.hashCode;
-
-  @override
-  String toString() => 'DpadElement($rect)';
 }
 
 final class StickElement extends PadElement {
