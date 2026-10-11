@@ -111,7 +111,7 @@ void main() {
 
     expect(await shown(GyroMode.aim), ['invertY', 'holdPosition', 'sixAxis']);
     expect(await shown(GyroMode.tilt), ['sixAxis']);
-    expect(await shown(GyroMode.motionDevice), isEmpty);
+    expect(await shown(GyroMode.motionDevice), ['invertY', 'holdPosition']);
   });
 
   testWidgets('options start as invert off, hold off, 6-axis on', (
@@ -157,5 +157,26 @@ void main() {
       gyroSixAxis: false,
     );
     expect(SettingModel.decode(model.encode()), model);
+  });
+
+  testWidgets('motion mode words its options for raw data, not sticks', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(
+        const SettingModel(gyroEnabled: true, gyroMode: GyroMode.motionDevice),
+      ),
+    );
+    expect(
+      find.text(
+        optionText(GyroMode.motionDevice, GyroOption.holdPosition).subtitle,
+      ),
+      findsOneWidget,
+    );
+    // The aim wording talks about a stick, which motion mode does not have.
+    expect(
+      find.text(optionText(GyroMode.aim, GyroOption.holdPosition).subtitle),
+      findsNothing,
+    );
   });
 }

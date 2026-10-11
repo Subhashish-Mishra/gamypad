@@ -25,6 +25,8 @@ class _FakeTransport implements GamepadTransport {
   Future<void> connect(ConnectionTarget target) async {}
   @override
   Future<void> disconnect() async {}
+  @override
+  Future<void> probe() async {}
 }
 
 class _FakeSensors implements MotionSensors {
@@ -272,6 +274,105 @@ void main() {
       sensors.accel.add(const Vec3(8.5, -4.9, 0));
       expect(sticks().last.stick, GamepadStick.leftStick);
       expect(sticks().last.x, isNot(0));
+    });
+  });
+
+  group('motion mode options', () {
+    var now = Duration.zero;
+
+    GyroController build(GyroOptions options) {
+      now = Duration.zero;
+      return GyroController(
+        sensors: sensors,
+        input: input,
+        mode: GyroMode.motionDevice,
+        options: options,
+        clock: () => now,
+      )..start();
+    }
+
+    // Device x rotation = controller y (yaw); device y = controller x (pitch,
+    // sign flipped by the landscape remap).
+    void gyro(Vec3 v) {
+      now += const Duration(milliseconds: 20);
+      sensors.gyro.add(v);
+    }
+
+    MotionMessage lastMotion() =>
+        transport.sent.whereType<MotionMessage>().last;
+
+    test('as sent: nothing changed', () {
+      build(const GyroOptions());
+      sensors.accel.add(_level);
+      gyro(const Vec3(0, -1, 0)); // device y -1 -> controller pitch +1 rad/s
+      expect(lastMotion().gx, greaterThan(0));
+    });
+
+    // One reading through a fresh controller with [options].
+    MotionMessage motionFor(GyroOptions options, Vec3 reading) {
+      final t = _FakeTransport();
+      final sensors = _FakeSensors();
+      GyroController(
+        sensors: sensors,
+        input: GamepadInput(transport: t, settings: const SettingModel()),
+        mode: GyroMode.motionDevice,
+        options: options,
+        clock: () => Duration.zero,
+      ).start();
+      sensors.accel.add(_level);
+      sensors.gyro.add(reading);
+      return t.sent.whereType<MotionMessage>().last;
+    }
+
+    test('invertY flips pitch only', () {
+      const reading = Vec3(0.5, -1, 0.25);
+      final plain = motionFor(const GyroOptions(), reading);
+      final flipped = motionFor(const GyroOptions(invertY: true), reading);
+
+      expect(plain.gx, isNot(0));
+      expect(flipped.gx, -plain.gx);
+      expect(flipped.gy, plain.gy);
+      expect(flipped.gz, plain.gz);
+      expect(flipped.ay, plain.ay); // accelerometer untouched
+    });
+
+    test('hold: keeps the last turning rate when the phone goes still', () {
+      build(const GyroOptions(holdPosition: true));
+      sensors.accel.add(_level);
+      gyro(const Vec3(0, -1, 0));
+      final turning = lastMotion().gx;
+      expect(turning, isNot(0));
+
+      gyro(const Vec3(0, 0, 0)); // still
+      gyro(const Vec3(0.001, 0, 0)); // sensor noise
+      expect(lastMotion().gx, turning);
+    });
+
+    test('hold: follows a new movement, then holds that instead', () {
+      build(const GyroOptions(holdPosition: true));
+      sensors.accel.add(_level);
+      gyro(const Vec3(0, -1, 0));
+      gyro(const Vec3(0, 1, 0));
+      expect(lastMotion().gx, lessThan(0));
+      gyro(const Vec3(0, 0, 0));
+      expect(lastMotion().gx, lessThan(0));
+    });
+
+    test('without hold: going still drops to zero', () {
+      build(const GyroOptions());
+      sensors.accel.add(_level);
+      gyro(const Vec3(0, -1, 0));
+      gyro(const Vec3(0, 0, 0));
+      expect(lastMotion().gx, 0);
+    });
+
+    test('hold does not apply to the accelerometer', () {
+      build(const GyroOptions(holdPosition: true));
+      sensors.accel.add(_level);
+      gyro(const Vec3(0, -1, 0));
+      sensors.accel.add(const Vec3(0, 0, 9.80665)); // phone laid flat
+      gyro(const Vec3(0, 0, 0));
+      expect(lastMotion().az, closeTo(1000, 5));
     });
   });
 }
